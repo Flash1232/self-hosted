@@ -1,3 +1,50 @@
+{
+	layer4 {
+		:80 {
+			@insecure_turn http host {$LIVEKIT_TURN_HOSTNAME}
+			route @insecure_turn {
+				proxy {
+					upstream {
+						dial localhost:5349
+					}
+				}
+			}
+			@insecure http host {$LIVEKIT_HOSTNAME}
+			route @insecure {
+				proxy {
+					upstream {
+						dial localhost:7880
+					}
+				}
+			}
+		}
+		:443 {
+			@secure_turn tls sni {$LIVEKIT_TURN_HOSTNAME}
+			route @secure_turn {
+				tls
+				proxy {
+					upstream {
+						dial localhost:5349
+					}
+				}
+			}
+			@secure tls sni {$LIVEKIT_HOSTNAME}
+			route @secure {
+				tls {
+					connection_policy {
+						alpn http/1.1
+					}
+				}
+				proxy {
+					upstream {
+						dial localhost:7880
+					}
+				}
+			}
+		}
+	}
+}
+
 {$HOSTNAME} {
 	route /api* {
 		uri strip_prefix /api
