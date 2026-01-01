@@ -6,7 +6,7 @@ redis:
 webhook:
   api_key: selfhosted
   urls:
-    - 'http://local.stoat.chat:14707/selfhosted'
+    - 'http://local.stoat.chat:8500/selfhosted'
 logging:
   level: debug
 keys:
