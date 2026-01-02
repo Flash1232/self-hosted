@@ -76,7 +76,8 @@ services:
 
   caddy:
     image: livekit/caddyl4
-    command: run --config /etc/caddy.json
+    command: run --config /etc/caddy/Caddyfile
+    env_file: .env.web
     ports:
       - "80:80"
       - "443:443"
@@ -86,9 +87,9 @@ services:
 #      - "stoat-redis-1:10.89.0.19"
 #      - "local.stoat.chat:192.168.0.20"
     volumes:
-      #- ./caddy.yaml:/etc/caddy.yaml
-      - ./caddynew.json:/etc/caddy.json
-      - ./data/caddy2-data:/data
+      - ./Caddyfile:/etc/caddy/Caddyfile
+      - ./data/caddy-data:/data
+      - ./data/caddy-config:/config
 
   # API server
   api:
