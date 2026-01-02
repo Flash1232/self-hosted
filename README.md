@@ -225,6 +225,8 @@ Create `.env.web` and download `Revolt.toml`, then modify them according to your
 ```bash
 echo "HOSTNAME=http://local.stoat.chat" > .env.web
 echo "REVOLT_PUBLIC_URL=http://local.stoat.chat/api" >> .env.web
+echo "LIVEKIT_TURN_HOSTNAME=livekit-turn.local.stoat.chat" >> .env.web
+echo "LIVEKIT_HOSTNAME=livekit.local.stoat.chat" >> .env.web
 wget -O Revolt.toml https://raw.githubusercontent.com/revoltchat/backend/main/crates/core/config/Revolt.toml
 ```
 
