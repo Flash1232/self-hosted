@@ -3,6 +3,8 @@
 # set hostname for Caddy
 echo "HOSTNAME=https://$1" > .env.web
 echo "REVOLT_PUBLIC_URL=https://$1/api" >> .env.web
+echo "LIVEKIT_TURN_HOSTNAME=livekit-turn.$1" >> .env.web
+echo "LIVEKIT_HOSTNAME=livekit.$1" >> .env.web
 
 # hostnames
 echo "[hosts]" >> Revolt.toml

@@ -7,6 +7,8 @@ services:
     restart: always
     volumes:
       - ./data/db:/data/db
+    post_start:
+      - command: mongosh --nodb --eval "disableTelemetry()"
     healthcheck:
       test: echo 'db.runCommand("ping").ok' | mongosh localhost:27017/test --quiet
       interval: 10s
@@ -17,7 +19,10 @@ services:
   # Redis: Event message broker & KV store
   redis:
     image: docker.io/eqalpha/keydb
+    command: keydb-server /etc/keydb/keydb.conf
     restart: always
+    ports:
+      - "6379:6379"
 
   # RabbitMQ: Internal message broker
   rabbit:
@@ -60,12 +65,13 @@ services:
 
   # Caddy: Web server
   caddy:
-    image: docker.io/caddy
-    restart: always
+    image: livekit/caddyl4
+    command: run --config /etc/caddy/Caddyfile
     env_file: .env.web
     ports:
       - "80:80"
       - "443:443"
+    restart: always
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile
       - ./data/caddy-data:/data
@@ -73,7 +79,7 @@ services:
 
   # API server
   api:
-    image: ghcr.io/revoltchat/server:20250930-2
+    image: ghcr.io/stoatchat/server:20251030-1-debug
     depends_on:
       database:
         condition: service_healthy
@@ -89,7 +95,7 @@ services:
 
   # Events service
   events:
-    image: ghcr.io/revoltchat/bonfire:20250930-2
+    image: ghcr.io/stoatchat/bonfire:20251030-1-debug
     depends_on:
       database:
         condition: service_healthy
@@ -103,13 +109,42 @@ services:
 
   # Web App
   web:
-    image: ghcr.io/revoltchat/client:master
-    restart: always
+    #image: ghcr.io/stoatchat/client:main
+    image: ghcr.io/flash1232/client:pr-2
+    ports:
+      - "8080:8080"
     env_file: .env.web
+    environment:
+      NODE_ENV: production
+      DOCKER_ENV: "true"
+    depends_on:
+      api:
+        condition: service_started
+    develop:
+      watch:
+        - action: sync+exec
+          path: ./conf/nginx.conf
+          target: /etc/nginx/conf.d/default.conf
+          exec:
+            command: nginx -s reload
+    deploy:
+      resources:
+        limits:
+          memory: "${PROD_MEMORY_LIMIT:-2G}"
+          cpus: "${PROD_CPU_LIMIT:-1.0}"
+        reservations:
+          memory: "${PROD_MEMORY_RESERVATION:-512M}"
+          cpus: "${PROD_CPU_RESERVATION:-0.25}"
+    security_opt:
+      - no-new-privileges:true
+    read_only: true
+    tmpfs:
+      - /tmp
+    restart: always
 
   # File server
   autumn:
-    image: ghcr.io/revoltchat/autumn:20250930-2
+    image: ghcr.io/stoatchat/autumn:20251030-1-debug
     depends_on:
       database:
         condition: service_healthy
@@ -123,7 +158,7 @@ services:
 
   # Metadata and image proxy
   january:
-    image: ghcr.io/revoltchat/january:20250930-2
+    image: ghcr.io/stoatchat/january:20251030-1-debug
     volumes:
       - type: bind
         source: ./Revolt.toml
@@ -132,7 +167,7 @@ services:
 
   # Tenor proxy
   gifbox:
-    image: ghcr.io/revoltchat/gifbox:20250930-2
+    image: ghcr.io/stoatchat/gifbox:20251030-1-debug
     volumes:
       - type: bind
         source: ./Revolt.toml
@@ -141,7 +176,7 @@ services:
 
   # Regular task daemon
   crond:
-    image: ghcr.io/revoltchat/crond:20250930-2
+    image: ghcr.io/stoatchat/crond:20251030-1-debug
     depends_on:
       database:
         condition: service_healthy
@@ -153,9 +188,41 @@ services:
         target: /Revolt.toml
     restart: always
 
+  # LiveKit server
+  livekit:
+    image: stoatchat/livekit-server:v1.9.9-amd64
+    depends_on:
+      redis:
+        condition: service_started
+      voiceingress:
+        condition: service_started
+    command: --config /etc/livekit.yml
+    network_mode: "host"
+    volumes:
+      - ./livekit.yml:/etc/livekit.yml
+    restart: always
+
+  # Voice service
+  voiceingress:
+    image: ghcr.io/stoatchat/voice-ingress:20251030-1-debug
+    depends_on:
+      database:
+        condition: service_healthy
+      redis:
+        condition: service_started
+      rabbit:
+        condition: service_healthy
+    volumes:
+      - type: bind
+        source: ./Revolt.toml
+        target: /Revolt.toml
+    ports:
+      - "8500:8500"
+    restart: always
+
   # Push notification daemon
   pushd:
-    image: ghcr.io/revoltchat/pushd:20250930-2
+    image: ghcr.io/stoatchat/pushd:20251030-1-debug
     depends_on:
       database:
         condition: service_healthy
