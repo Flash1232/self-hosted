@@ -17,7 +17,10 @@ services:
   # Redis: Event message broker & KV store
   redis:
     image: docker.io/eqalpha/keydb
+    command: keydb-server /etc/keydb/keydb.conf
     restart: always
+    ports:
+      - "6379:6379"
 
   # RabbitMQ: Internal message broker
   rabbit:
@@ -59,17 +62,33 @@ services:
     restart: always
 
   # Caddy: Web server
+#  caddy:
+#    image: docker.io/caddy
+#    restart: always
+#    env_file: .env.web
+#    ports:
+#      - "80:80"
+#      - "443:443"
+#    volumes:
+#      - ./Caddyfile:/etc/caddy/Caddyfile
+#      - ./data/caddy-data:/data
+#      - ./data/caddy-config:/config
+
   caddy:
-    image: docker.io/caddy
-    restart: always
-    env_file: .env.web
+    image: livekit/caddyl4
+    command: run --config /etc/caddy.json
     ports:
       - "80:80"
       - "443:443"
+    restart: always
+#    extra_hosts:
+#      - host.docker.internal:host-gateway
+#      - "stoat-redis-1:10.89.0.19"
+#      - "local.stoat.chat:192.168.0.20"
     volumes:
-      - ./Caddyfile:/etc/caddy/Caddyfile
-      - ./data/caddy-data:/data
-      - ./data/caddy-config:/config
+      #- ./caddy.yaml:/etc/caddy.yaml
+      - ./caddynew.json:/etc/caddy.json
+      - ./data/caddy2-data:/data
 
   # API server
   api:
@@ -81,6 +100,9 @@ services:
         condition: service_started
       rabbit:
         condition: service_healthy
+    extra_hosts:
+      - host.docker.internal:host-gateway
+      - "livekit:127.0.0.1"
     volumes:
       - type: bind
         source: ./Revolt.toml
@@ -191,6 +213,13 @@ services:
       voiceingress:
         condition: service_started
     command: --config /etc/livekit.yml
+    network_mode: "host"
+#    ports:
+##      - "443:443"
+#      - "443:443/udp"
+#      - "7880:7880"
+#      - "7881:7881"
+#      - "50000-60000:50000-60000/udp"
     volumes:
       - ./livekit.yml:/etc/livekit.yml
     restart: always
@@ -209,6 +238,8 @@ services:
       - type: bind
         source: ./Revolt.toml
         target: /Revolt.toml
+    ports:
+      - "8500:8500"
     restart: always
 
   # Push notification daemon
