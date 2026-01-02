@@ -4,10 +4,10 @@ redis:
     username: ""
     password: ""
 webhook:
-  api_key: selfhosted
+  api_key: worldwide
   urls:
-    - 'http://local.stoat.chat:8500/selfhosted'
+    - 'http://127.0.0.1:8500/worldwide'
 logging:
   level: debug
 keys:
-  selfhosted: ZjCofRlfm6GGtjlifmNpCDkcQbEIIVC0
+  worldwide: ZjCofRlfm6GGtjlifmNpCDkcQbEIIVC0

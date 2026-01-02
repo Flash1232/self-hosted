@@ -64,18 +64,6 @@ services:
     restart: always
 
   # Caddy: Web server
-#  caddy:
-#    image: docker.io/caddy
-#    restart: always
-#    env_file: .env.web
-#    ports:
-#      - "80:80"
-#      - "443:443"
-#    volumes:
-#      - ./Caddyfile:/etc/caddy/Caddyfile
-#      - ./data/caddy-data:/data
-#      - ./data/caddy-config:/config
-
   caddy:
     image: livekit/caddyl4
     command: run --config /etc/caddy/Caddyfile
@@ -84,10 +72,6 @@ services:
       - "80:80"
       - "443:443"
     restart: always
-#    extra_hosts:
-#      - host.docker.internal:host-gateway
-#      - "stoat-redis-1:10.89.0.19"
-#      - "local.stoat.chat:192.168.0.20"
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile
       - ./data/caddy-data:/data
@@ -103,9 +87,6 @@ services:
         condition: service_started
       rabbit:
         condition: service_healthy
-    extra_hosts:
-      - host.docker.internal:host-gateway
-      - "livekit:127.0.0.1"
     volumes:
       - type: bind
         source: ./Revolt.toml
@@ -131,7 +112,7 @@ services:
     #image: ghcr.io/stoatchat/client:main
     image: ghcr.io/flash1232/client:pr-2
     ports:
-      - "${PROD_PORT:-8080}:8080"
+      - "8080:8080"
     env_file: .env.web
     environment:
       NODE_ENV: production
@@ -217,12 +198,6 @@ services:
         condition: service_started
     command: --config /etc/livekit.yml
     network_mode: "host"
-#    ports:
-##      - "443:443"
-#      - "443:443/udp"
-#      - "7880:7880"
-#      - "7881:7881"
-#      - "50000-60000:50000-60000/udp"
     volumes:
       - ./livekit.yml:/etc/livekit.yml
     restart: always
