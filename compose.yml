@@ -77,7 +77,7 @@ services:
 
   # API server
   api:
-    image: ghcr.io/stoatchat/server:20251030-1-debug
+    image: ghcr.io/flash1232/stoatchat/server:20251030-1-debug
     depends_on:
       database:
         condition: service_healthy
@@ -93,7 +93,7 @@ services:
 
   # Events service
   events:
-    image: ghcr.io/stoatchat/bonfire:20251030-1-debug
+    image: ghcr.io/flash1232/stoatchat/bonfire:20251030-1-debug
     depends_on:
       database:
         condition: service_healthy
@@ -108,12 +108,13 @@ services:
   # Web App
   web:
     #image: ghcr.io/stoatchat/client:main
-    image: ghcr.io/flash1232/client:pr-2
+    image: ghcr.io/flash1232/stoatchat/client:justatest-dev
     ports:
       - "8080:8080"
     env_file: .env.web
     environment:
       NODE_ENV: production
+      VITE_API_URL: https://holundersirup
       DOCKER_ENV: "true"
     depends_on:
       api:
@@ -137,12 +138,15 @@ services:
       - no-new-privileges:true
     read_only: true
     tmpfs:
-      - /tmp
+      - /etc/nginx/conf.d:uid=101,gid=101,mode=1770
+      - /var/cache/nginx:uid=101,gid=101,mode=1770
+      - /var/run:uid=101,gid=101,mode=1770
+      - /tmp:uid=101,gid=101,mode=1770
     restart: always
 
   # File server
   autumn:
-    image: ghcr.io/stoatchat/autumn:20251030-1-debug
+    image: ghcr.io/flash1232/stoatchat/autumn:20251030-1-debug
     depends_on:
       database:
         condition: service_healthy
@@ -156,7 +160,7 @@ services:
 
   # Metadata and image proxy
   january:
-    image: ghcr.io/stoatchat/january:20251030-1-debug
+    image: ghcr.io/flash1232/stoatchat/january:20251030-1-debug
     volumes:
       - type: bind
         source: ./Revolt.toml
@@ -165,7 +169,7 @@ services:
 
   # Tenor proxy
   gifbox:
-    image: ghcr.io/stoatchat/gifbox:20251030-1-debug
+    image: ghcr.io/flash1232/stoatchat/gifbox:20251030-1-debug
     volumes:
       - type: bind
         source: ./Revolt.toml
@@ -174,7 +178,7 @@ services:
 
   # Regular task daemon
   crond:
-    image: ghcr.io/stoatchat/crond:20251030-1-debug
+    image: ghcr.io/flash1232/stoatchat/crond:20251030-1-debug
     depends_on:
       database:
         condition: service_healthy
@@ -188,7 +192,7 @@ services:
 
   # LiveKit server
   livekit:
-    image: stoatchat/livekit-server:v1.9.9-amd64
+    image: ghcr.io/flash1232/stoatchat/livekit-server:v1.9.9
     depends_on:
       redis:
         condition: service_started
@@ -202,7 +206,7 @@ services:
 
   # Voice service
   voiceingress:
-    image: ghcr.io/stoatchat/voice-ingress:20251030-1-debug
+    image: ghcr.io/flash1232/stoatchat/voice-ingress:20251030-1-debug
     depends_on:
       database:
         condition: service_healthy
@@ -220,7 +224,7 @@ services:
 
   # Push notification daemon
   pushd:
-    image: ghcr.io/stoatchat/pushd:20251030-1-debug
+    image: ghcr.io/flash1232/stoatchat/pushd:20251030-1-debug
     depends_on:
       database:
         condition: service_healthy
