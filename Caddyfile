@@ -5,7 +5,7 @@
 			route @insecure_turn {
 				proxy {
 					upstream {
-						dial localhost:5349
+						dial host.docker.internal:5349
 					}
 				}
 			}
@@ -13,7 +13,7 @@
 			route @insecure {
 				proxy {
 					upstream {
-						dial localhost:7880
+						dial host.docker.internal:7880
 					}
 				}
 			}
@@ -24,7 +24,7 @@
 				tls
 				proxy {
 					upstream {
-						dial localhost:5349
+						dial host.docker.internal:5349
 					}
 				}
 			}
@@ -37,7 +37,7 @@
 				}
 				proxy {
 					upstream {
-						dial localhost:7880
+						dial host.docker.internal:7880
 					}
 				}
 			}
@@ -45,7 +45,72 @@
 	}
 }
 
+{$LIVEKIT_HOSTNAME} {
+	reverse_proxy host.docker.internal:7880
+
+	@cors_origin_match {
+		header_regexp origin Origin ^https?://($ROOT_DOMAIN)$
+	}
+
+	@cors_preflight {
+		method OPTIONS
+		path /rtc/validate*
+	}
+
+	header @cors_preflight {
+		Access-Control-Allow-Methods "GET, POST, PUT, DELETE, OPTIONS"
+		Access-Control-Allow-Headers "Authorization, Content-Type"
+		Access-Control-Max-Age "86400"
+	}
+
+	header @cors_origin_match {
+		Access-Control-Allow-Origin "{http.request.header.Origin}"
+		Vary "Origin"
+	}
+
+	respond @cors_preflight 204
+
+	tls {
+		dns cloudflare {env.CF_API_TOKEN}
+		propagation_delay 10s
+		propagation_timeout -1
+		resolvers 1.1.1.1
+	}
+}
+
+{$LIVEKIT_TURN_HOSTNAME} {
+	tls {
+		dns cloudflare {env.CF_API_TOKEN}
+		propagation_delay 10s
+		propagation_timeout -1
+		resolvers 1.1.1.1
+	}
+}
+
 {$HOSTNAME} {
+	# Validate multiple origins using regex
+	@cors_origin_match {
+		header_regexp origin Origin ^https?://($ROOT_DOMAIN)$
+	}
+
+	# Preflight for matched origins
+	@cors_preflight {
+		method OPTIONS
+	}
+
+	header @cors_preflight {
+		Access-Control-Allow-Methods "GET, POST, PUT, DELETE, OPTIONS"
+		Access-Control-Allow-Headers "Content-Type, Authorization"
+		Access-Control-Max-Age "86400"
+	}
+
+	header @cors_origin_match {
+		Access-Control-Allow-Origin "{http.request.header.Origin}"
+		Vary "Origin"
+	}
+
+	respond @cors_preflight 204
+
 	route /api* {
 		uri strip_prefix /api
 		reverse_proxy http://api:14702 {

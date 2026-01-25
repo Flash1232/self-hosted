@@ -3,7 +3,7 @@ name: stoat
 services:
   # MongoDB: Database
   database:
-    image: docker.io/mongo
+    image: docker.io/mongo:7.0
     restart: always
     volumes:
       - ./data/db:/data/db
@@ -63,17 +63,22 @@ services:
 
   # Caddy: Web server
   caddy:
-    image: livekit/caddyl4
+    #image: livekit/caddyl4
+    image: caddyl4dns:latest
     command: run --config /etc/caddy/Caddyfile
-    env_file: .env.web
+    env_file:
+      - .env.web
+      - .env.caddy
     ports:
       - "80:80"
       - "443:443"
     restart: always
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile
-      - ./data/caddy-data:/data
-      - ./data/caddy-config:/config
+      - ./data/caddy-data:/root/.local/share/caddy
+      - ./data/caddy-config:/root/.config/caddy
 
   # API server
   api:
