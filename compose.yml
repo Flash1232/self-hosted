@@ -3,7 +3,7 @@ name: stoat
 services:
   # MongoDB: Database
   database:
-    image: docker.io/mongo
+    image: docker.io/mongo:7.0
     restart: always
     volumes:
       - ./data/db:/data/db
@@ -17,7 +17,10 @@ services:
   # Redis: Event message broker & KV store
   redis:
     image: docker.io/eqalpha/keydb
+    command: keydb-server /etc/keydb/keydb.conf
     restart: always
+    ports:
+      - "6379:6379"
 
   # RabbitMQ: Internal message broker
   rabbit:
@@ -60,20 +63,26 @@ services:
 
   # Caddy: Web server
   caddy:
-    image: docker.io/caddy
-    restart: always
-    env_file: .env.web
+    #image: livekit/caddyl4
+    image: caddyl4dns:latest
+    command: run --config /etc/caddy/Caddyfile
+    env_file:
+      - .env.web
+      - .env.caddy
     ports:
       - "80:80"
       - "443:443"
+    restart: always
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile
-      - ./data/caddy-data:/data
-      - ./data/caddy-config:/config
+      - ./data/caddy-data:/root/.local/share/caddy
+      - ./data/caddy-config:/root/.config/caddy
 
   # API server
   api:
-    image: ghcr.io/revoltchat/server:20250930-2
+    image: ghcr.io/flash1232/stoatchat/server:20251030-1-debug
     depends_on:
       database:
         condition: service_healthy
@@ -81,6 +90,8 @@ services:
         condition: service_started
       rabbit:
         condition: service_healthy
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     volumes:
       - type: bind
         source: ./Revolt.toml
@@ -89,7 +100,7 @@ services:
 
   # Events service
   events:
-    image: ghcr.io/revoltchat/bonfire:20250930-2
+    image: ghcr.io/flash1232/stoatchat/bonfire:20251030-1-debug
     depends_on:
       database:
         condition: service_healthy
@@ -104,12 +115,15 @@ services:
   # Web App
   web:
     #image: ghcr.io/stoatchat/client:main
-    image: ghcr.io/flash1232/client:pr-2
+    image: ghcr.io/flash1232/stoatchat/client:justatest-dev
     ports:
       - "8080:8080"
     env_file: .env.web
     environment:
       NODE_ENV: production
+      VITE_API_URL: https://holundersirup
+      VITE_WS_URL: https://revolt.nanowaris.com/ws
+      VITE_HCAPTCHA_SITEKEY: ""
       DOCKER_ENV: "true"
     depends_on:
       api:
@@ -133,12 +147,15 @@ services:
       - no-new-privileges:true
     read_only: true
     tmpfs:
-      - /tmp
+      - /etc/nginx/conf.d:uid=101,gid=101,mode=1770
+      - /var/cache/nginx:uid=101,gid=101,mode=1770
+      - /var/run:uid=101,gid=101,mode=1770
+      - /tmp:uid=101,gid=101,mode=1770
     restart: always
 
   # File server
   autumn:
-    image: ghcr.io/revoltchat/autumn:20250930-2
+    image: ghcr.io/flash1232/stoatchat/autumn:20251030-1-debug
     depends_on:
       database:
         condition: service_healthy
@@ -152,7 +169,7 @@ services:
 
   # Metadata and image proxy
   january:
-    image: ghcr.io/revoltchat/january:20250930-2
+    image: ghcr.io/flash1232/stoatchat/january:20251030-1-debug
     volumes:
       - type: bind
         source: ./Revolt.toml
@@ -161,7 +178,7 @@ services:
 
   # Tenor proxy
   gifbox:
-    image: ghcr.io/revoltchat/gifbox:20250930-2
+    image: ghcr.io/flash1232/stoatchat/gifbox:20251030-1-debug
     volumes:
       - type: bind
         source: ./Revolt.toml
@@ -170,7 +187,7 @@ services:
 
   # Regular task daemon
   crond:
-    image: ghcr.io/revoltchat/crond:20250930-2
+    image: ghcr.io/flash1232/stoatchat/crond:20251030-1-debug
     depends_on:
       database:
         condition: service_healthy
@@ -182,9 +199,41 @@ services:
         target: /Revolt.toml
     restart: always
 
+  # LiveKit server
+  livekit:
+    image: ghcr.io/flash1232/stoatchat/livekit-server:v1.9.9
+    depends_on:
+      redis:
+        condition: service_started
+      voiceingress:
+        condition: service_started
+    command: --config /etc/livekit.yml
+    network_mode: "host"
+    volumes:
+      - ./livekit.yml:/etc/livekit.yml
+    restart: always
+
+  # Voice service
+  voiceingress:
+    image: ghcr.io/flash1232/stoatchat/voice-ingress:20251030-1-debug
+    depends_on:
+      database:
+        condition: service_healthy
+      redis:
+        condition: service_started
+      rabbit:
+        condition: service_healthy
+    volumes:
+      - type: bind
+        source: ./Revolt.toml
+        target: /Revolt.toml
+    ports:
+      - "8500:8500"
+    restart: always
+
   # Push notification daemon
   pushd:
-    image: ghcr.io/revoltchat/pushd:20250930-2
+    image: ghcr.io/flash1232/stoatchat/pushd:20251030-1-debug
     depends_on:
       database:
         condition: service_healthy
